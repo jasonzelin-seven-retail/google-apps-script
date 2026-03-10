@@ -21,13 +21,12 @@ function refreshBQConnector(centerSpreadsheet) {
 function generateRetentionData() {
   const mappingSpreadsheet = SpreadsheetApp.openById(id=financeManagementGsheetKey)
   const mappingSheet = mappingSpreadsheet.getSheetByName(name='url mapping')
-  // const indexArr = [0,3,4]
-  const mappingData = mappingSheet.getRange('F2:H').getValues().filter(rows => rows[0] != '') //.map(row => indexArr.map(row[i]))
+  const mappingData = mappingSheet.getRange('H2:K').getValues().filter(rows => rows[0] != '') //.map(row => indexArr.map(row[i]))
   
   mappingSisDict = {}
   mappingRetentionDict = {}
   mappingData.forEach(row => {
-    const [center, keySis, keyRetention] = row
+    const [center, keyDashboard, keySis, keyRetention] = row
     mappingSisDict[center] = keySis
     mappingRetentionDict[center] = keyRetention
   })

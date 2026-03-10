@@ -22,6 +22,16 @@ function truncateToWeekMonday(date) {
   return result;
 }
 
+function lookupLastData(array, lookupValue, lookupCol, sortCol) {
+  let result = array  
+                .filter(row => row[lookupCol] == lookupValue)
+                .map(a => `${a[lookupCol]}.${a[sortCol]}`)
+                .sort()
+                .map(a => [a.split('.')[lookupCol], a.split('.')[sortCol]])
+                .at(-1);
+  return result;
+}
+
 // Main functions
 function generateSurveySchedule() {
   var gsheet_key = '1R_-hi6Ncp1QwQyfc3aRbAzXuJO1SdoqzCnGWK8YSBYE'
@@ -29,48 +39,52 @@ function generateSurveySchedule() {
   var sourceSheet =  spreadsheet.getSheetByName(name='Combined Class Database_v2')
   var outSheet = spreadsheet.getSheetByName(name="Schedule");
 
-  var data = sourceSheet.getRange('A2:AD').getValues()
-  var indexArr = [0,10,2,7,11,13,1,26,27,28,29]
+  var data = sourceSheet.getRange('A2:AF').getValues()
+  var outData = outSheet.getRange('A2:W').getValues().map(row => [2, 22].map(i => row[i])) // Get only class id and blast date
+  var indexArr = [0,10,2,7,11,13,1,26,27,28,29,31]
   // Filtering only relevant columns and rows
-  data = data.map(row => indexArr.map(i => row[i])).filter(rows => rows[6] == 'Active' & rows[10] == false)
-  const outputRows = [];
-  // console.log(data)
+  data = data.map(row => indexArr.map(i => row[i])).filter(rows => rows[6] == 'Active' & rows[10] == false & rows[11] < rows[9] & rows[5] != '')
+  var outputRows = [];
+  var newDate = None;
 
   data.forEach(row => {
-    const [center, sa, classId, className, startDate, graduationDate, status, surveyStartDate, surveyStartWeek, surveyCount, createSchedule] = row // assigning values from each column to respective column name to improve code readibility
-    if ((createSchedule === false || createSchedule === "false") & surveyCount > 0) {
-      var newDate = surveyStartDate
-      var deltaDays = 0
-
-      for (let i = 0; i < surveyCount; i++) {
-        if (i == 0) {
-          deltaDays = 0
-        }
-        else if (newDate.getDate() >= 15) {
+    const [center, sa, classId, className, startDate, graduationDate, status, surveyStartDate, surveyStartWeek, plannedSurveyCount, createSchedule, actualSurveyCount] = row // assigning values from each column to respective column name to improve code readibility
+    if ((createSchedule === false || createSchedule === "false") & plannedSurveyCount > 0) {
+      if (actualSurveyCount === 0) {
+        newDate = surveyStartDate
+        outputRows.push([center, sa, classId, className, startDate, graduationDate, status, newDate]);
+      }
+      else if (actualSurveyCount > 0) {
+        var lastSurveyDate = lookupLastData(outData, classId, 0, 1)
+        if (lastSurveyDate.getDate() >= 15) {
           deltaDays = 28
         }
         else {
           deltaDays = 31
         }
 
-        newDate = truncateToWeekMonday(addDaysToDate(date=newDate, days=deltaDays))
+        newDate = truncateToWeekMonday(addDaysToDate(date=lastSurveyDate, days=deltaDays))
         outputRows.push([center, sa, classId, className, startDate, graduationDate, status, newDate]);
-      }
+      };
     }
   });
-  var lastRow = outSheet.getLastRow()
+
+  // Filter only schedule blast date in next week
+  const today = new Date();
+  const nextWeek = addDaysToDate(date=truncateToWeekMonday(today), days=7);
+  outputRows = outputRows.filter(row => row[7] == nextWeek);
 
   // Insert an empty row to signify separation of each data input
-  outSheet.insertRowAfter(lastRow)
-  outSheet.insertRowAfter(lastRow)
+  var lastRow = outSheet.getLastRow(outData, classId, 0, 1);
+  outSheet.insertRowAfter(lastRow);
+  outSheet.insertRowAfter(lastRow);
   // Recalculate last row after the insertion 
   lastRow = lastRow + 2
 
   // Append all generated schedules to the Schedule sheet
-  var indexArr0 = [0,1,2,3,4,5]
   if (outputRows.length > 0) {
     outSheet.getRange(`A${lastRow}:F${lastRow + outputRows.length - 1}`)
-            .setValues(outputRows.map(row => indexArr0.map(i => row[i])));
+            .setValues(outputRows.map(row => [0,1,2,3,4,5].map(i => row[i])));
     outSheet.getRange(`H${lastRow}:H${lastRow + outputRows.length - 1}`)
             .setValues(outputRows.map(row => [row[6]]));
     outSheet.getRange(`W${lastRow}:W${lastRow + outputRows.length - 1}`)
