@@ -1,6 +1,6 @@
 {
   "scriptId": "1KyZFWbttpt5Ac3b-cXPHRj3GLldYs_l_8UG6kvv3rIhFYW4THhUjkuVZ",
-  "rootDir": "scripts/monitoring_tracker_nps",
+  "rootDir": "",
   "scriptExtensions": [
     ".js",
     ".gs"
