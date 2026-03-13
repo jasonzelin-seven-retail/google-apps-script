@@ -34,24 +34,26 @@ function lookupLastData(array, lookupValue, lookupCol, sortCol) {
 
 // Main functions
 function generateSurveySchedule() {
-  var gsheet_key = '1R_-hi6Ncp1QwQyfc3aRbAzXuJO1SdoqzCnGWK8YSBYE'
-  var spreadsheet = SpreadsheetApp.openById(gsheet_key)
-  var sourceSheet =  spreadsheet.getSheetByName(name='Combined Class Database_v2')
+  var gsheet_key = '1R_-hi6Ncp1QwQyfc3aRbAzXuJO1SdoqzCnGWK8YSBYE';
+  var spreadsheet = SpreadsheetApp.openById(gsheet_key);
+  var sourceSheet =  spreadsheet.getSheetByName(name='Combined Class Database_v2');
   var outSheet = spreadsheet.getSheetByName(name="Schedule");
+  var outSheetTest = spreadsheet.getSheetByName(name="Schedule_test");
 
   var data = sourceSheet.getRange('A2:AF').getValues()
   var outData = outSheet.getRange('A2:W').getValues().map(row => [2, 22].map(i => row[i])) // Get only class id and blast date
-  var indexArr = [0,10,2,7,11,13,1,26,27,28,29,31]
+  var indexArr = [0,10,2,7,11,13,1,26,27,28,29,31];
   // Filtering only relevant columns and rows
-  data = data.map(row => indexArr.map(i => row[i])).filter(rows => rows[6] == 'Active' & rows[10] == false & rows[11] < rows[9] & rows[5] != '')
+  data = data.map(row => indexArr.map(i => row[i])).filter(rows => (rows[6] == 'Active') & (rows[10] == false) & (rows[11] < rows[9]) & (rows[5] != ''));
   var outputRows = [];
-  var newDate = None;
+  var newDate = null;
+  var deltaDays = null;
 
   data.forEach(row => {
     const [center, sa, classId, className, startDate, graduationDate, status, surveyStartDate, surveyStartWeek, plannedSurveyCount, createSchedule, actualSurveyCount] = row // assigning values from each column to respective column name to improve code readibility
     if ((createSchedule === false || createSchedule === "false") & plannedSurveyCount > 0) {
       if (actualSurveyCount === 0) {
-        newDate = surveyStartDate
+        newDate = truncateToWeekMonday(surveyStartDate).toDateString();
         outputRows.push([center, sa, classId, className, startDate, graduationDate, status, newDate]);
       }
       else if (actualSurveyCount > 0) {
@@ -63,7 +65,7 @@ function generateSurveySchedule() {
           deltaDays = 31
         }
 
-        newDate = truncateToWeekMonday(addDaysToDate(date=lastSurveyDate, days=deltaDays))
+        newDate = truncateToWeekMonday(addDaysToDate(date=lastSurveyDate, days=deltaDays)).toDateString();
         outputRows.push([center, sa, classId, className, startDate, graduationDate, status, newDate]);
       };
     }
@@ -71,23 +73,23 @@ function generateSurveySchedule() {
 
   // Filter only schedule blast date in next week
   const today = new Date();
-  const nextWeek = addDaysToDate(date=truncateToWeekMonday(today), days=7);
-  outputRows = outputRows.filter(row => row[7] == nextWeek);
+  const nextWeek = addDaysToDate(date=truncateToWeekMonday(today), days=7).toDateString();
+  outputRows = outputRows.filter(row => row[7] === nextWeek);
 
   // Insert an empty row to signify separation of each data input
-  var lastRow = outSheet.getLastRow(outData, classId, 0, 1);
-  outSheet.insertRowAfter(lastRow);
-  outSheet.insertRowAfter(lastRow);
+  var lastRow = outSheetTest.getLastRow();
+  outSheetTest.insertRowAfter(lastRow);
+  outSheetTest.insertRowAfter(lastRow);
   // Recalculate last row after the insertion 
   lastRow = lastRow + 2
 
   // Append all generated schedules to the Schedule sheet
   if (outputRows.length > 0) {
-    outSheet.getRange(`A${lastRow}:F${lastRow + outputRows.length - 1}`)
+    outSheetTest.getRange(`A${lastRow}:F${lastRow + outputRows.length - 1}`)
             .setValues(outputRows.map(row => [0,1,2,3,4,5].map(i => row[i])));
-    outSheet.getRange(`H${lastRow}:H${lastRow + outputRows.length - 1}`)
+    outSheetTest.getRange(`H${lastRow}:H${lastRow + outputRows.length - 1}`)
             .setValues(outputRows.map(row => [row[6]]));
-    outSheet.getRange(`W${lastRow}:W${lastRow + outputRows.length - 1}`)
+    outSheetTest.getRange(`W${lastRow}:W${lastRow + outputRows.length - 1}`)
             .setValues(outputRows.map(row => [row[7]]));
 
   }
